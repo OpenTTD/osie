@@ -41,7 +41,7 @@ objs/%.o: src/%.cpp
 
 $(OSIE): $(OBJS:%=objs/%)
 	@echo '[LINK] $@'
-	$(Q)$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) `$(LIBPNG_CONFIG) --ldflags` $^
+	$(Q)$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $^ `$(LIBPNG_CONFIG) --ldflags`
 
 VERSION := $(shell ./findversion.sh | cut -f 1 -d'	')
 RES := $(shell if [ "`cat version.cache 2>/dev/null`" != "$(VERSION)" ]; then echo "$(VERSION)" > version.cache; fi )
