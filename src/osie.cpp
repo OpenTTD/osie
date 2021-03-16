@@ -20,12 +20,12 @@
 
 /** @file osie.cpp Application for getting the saved information from OpenTTD screenshots */
 
-#include <stdlib.h>
+#include <string>
+#include <fstream>
 #include <string.h>
 #include <png.h>
 
-#include "rev.hpp"
-
+std::string _osie_version = "1.0.0";
 
 /**
  * Show the help to the user.
@@ -44,8 +44,14 @@ void ShowHelp(const char *cmd)
 		"osie is Copyright 2010 by Remko Bijker\n"
 		"You may copy and redistribute it under the terms of the GNU General Public\n"
 		"License version 2, as stated in the file 'COPYING'\n",
-		_osie_version, cmd
+		_osie_version.c_str(), cmd
 	);
+}
+
+void readFile(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+	png_voidp fs = png_get_io_ptr(png_ptr);
+	((std::ifstream*)fs)->read((char*)data, length);
 }
 
 /**
@@ -60,36 +66,39 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	png_structp png_ptr = NULL;
-	png_infop info_ptr  = NULL;
+	png_structp png_ptr = nullptr;
+	png_infop info_ptr  = nullptr;
 	int ret = -1;
 	png_byte header[8]; // 8 is the maximum size that can be checked
 
-	png_textp text = NULL;
+	png_textp text = nullptr;
 	int num = 0;
 
 	/* Open file and test for it being a png */
-	FILE *fp = fopen(argv[1], "rb");
-	if (fp == NULL) {
+	std::ifstream fs(argv[1], std::ifstream::binary | std::ifstream::in | std::ifstream::out);
+	
+	if (!fs) {
 		fprintf(stderr, "File %s could not be opened for reading\n", argv[1]);
 		goto exit;
 	}
 
-	if (fread(header, 1, 8, fp) != 8 || png_sig_cmp(header, 0, 8) != 0) {
+	fs.read((char*)header, 8);
+	
+	if (png_sig_cmp(header, 0, 8) != 0) {
 		fprintf(stderr, "File %s is not recognized as a PNG file\n", argv[1]);
 		goto exit;
 	}
 
 	/* Initialize stuff */
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
-	if (png_ptr == NULL) {
+	if (png_ptr == nullptr) {
 		fprintf(stderr, "png_create_read_struct failed\n");
 		goto exit;
 	}
 
 	info_ptr = png_create_info_struct(png_ptr);
-	if (info_ptr == NULL) {
+	if (info_ptr == nullptr) {
 		fprintf(stderr, "png_create_info_struct failed\n");
 		goto exit;
 	}
@@ -99,7 +108,8 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 
-	png_init_io(png_ptr, fp);
+	png_set_read_fn(png_ptr, (png_voidp)&fs, readFile);
+
 	png_set_sig_bytes(png_ptr, 8);
 	png_read_info(png_ptr, info_ptr);
 
@@ -116,8 +126,8 @@ int main(int argc, char *argv[])
 	ret = 0;
 
 exit:
-	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-	if (fp != NULL) fclose(fp);
+	png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+	if (fs) fs.close();
 
 	return ret;
 }
